@@ -1,0 +1,38 @@
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# Install system dependencies including security scanner tools
+RUN apt-get update && apt-get install -y \
+    git \
+    curl \
+    wget \
+    unzip \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Semgrep
+RUN pip install semgrep
+
+# Install Gitleaks
+RUN GITLEAKS_VERSION="8.18.4" && \
+    curl -sSfL "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" \
+    | tar -xz -C /usr/local/bin gitleaks && \
+    chmod +x /usr/local/bin/gitleaks
+
+# Install Trivy
+RUN TRIVY_VERSION="0.52.1" && \
+    curl -sSfL "https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}/trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz" \
+    | tar -xz -C /usr/local/bin trivy && \
+    chmod +x /usr/local/bin/trivy
+
+# Install Python dependencies
+COPY pyproject.toml .
+RUN pip install --no-cache-dir -e ".[dev]"
+
+# Copy application code
+COPY . .
+
+EXPOSE 8000
+
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]

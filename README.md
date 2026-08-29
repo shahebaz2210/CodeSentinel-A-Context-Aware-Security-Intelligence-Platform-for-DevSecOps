@@ -1,431 +1,216 @@
-# CodeSentinel-A-Context-Aware-Security-Intelligence-Platform-for-DevSecOps
+# CodeSentinel — A Context-Aware Security Intelligence Platform for DevSecOps
 
-### Context-Aware Security Intelligence Platform for Modern DevSecOps
+<div align="center">
 
-CodeSentinel is an AI-powered DevSecOps security platform that combines traditional security scanners with contextual AI analysis to identify, prioritize, and explain security vulnerabilities in source code and Pull Requests.
+![CodeSentinel](https://img.shields.io/badge/CodeSentinel-Security_Intelligence-00d4aa?style=for-the-badge&logo=shield)
+![Python](https://img.shields.io/badge/Python-3.12-blue?style=flat-square&logo=python)
+![Next.js](https://img.shields.io/badge/Next.js-15-black?style=flat-square&logo=next.js)
+![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688?style=flat-square&logo=fastapi)
+![LangGraph](https://img.shields.io/badge/LangGraph-Agent_Orchestration-7c3aed?style=flat-square)
 
-Instead of simply reporting security issues, CodeSentinel analyzes the **code context, vulnerability severity, repository history, and security knowledge** to help developers understand which issues are truly critical and what actions should be taken.
+</div>
 
----
-
-## 🚀 Problem Statement
-
-Modern development pipelines use multiple security tools such as SAST, secret scanners, and dependency scanners. However, these tools often generate a large number of findings, including false positives and low-priority issues.
-
-Developers therefore face problems such as:
-
-* Too many security alerts
-* Difficulty identifying critical vulnerabilities
-* False positives
-* Lack of contextual explanations
-* Security knowledge scattered across different sources
-* Difficulty understanding the impact of a vulnerability
-* No unified view of security risks across repositories and Pull Requests
+CodeSentinel is a context-aware security intelligence platform that integrates directly into your GitHub workflow to detect, analyze, and remediate security vulnerabilities using a 5-agent AI pipeline with deterministic risk scoring and policy enforcement.
 
 ---
 
-## 💡 Solution
+## Architecture Overview
 
-CodeSentinel provides a centralized security intelligence platform that integrates security scanners with AI.
+```
+GitHub → Webhook → Celery Task → LangGraph Pipeline:
+  Agent 1: Repository Analysis    (deterministic parsers + LLM context)
+  Agent 2: Security Detection     (Semgrep + Gitleaks + Trivy)
+  Agent 3: Security Intelligence  (RAG → OWASP/CWE-grounded LLM)
+  Agent 4: Risk & Validation      (LLM factors → Deterministic Risk Engine)
+  ★ Policy Gate                   (100% deterministic — no AI in gate)
+  Agent 5: Remediation            (LLM suggestions → sandbox validation)
+→ Results → PostgreSQL → Frontend Dashboard + GitHub Check Run + PR Comment
+```
 
-It performs:
-
-1. **Repository Security Scanning**
-2. **Pull Request Security Scanning**
-3. **Secret Detection**
-4. **Static Application Security Testing**
-5. **Dependency Vulnerability Analysis**
-6. **AI-Based Vulnerability Analysis**
-7. **Context-Aware Risk Prioritization**
-8. **Security Knowledge Retrieval using RAG**
-9. **Developer-Friendly Security Explanations**
-10. **Security Dashboard and Historical Analysis**
+**Key design invariants:**
+- Risk scores computed by a deterministic engine — never by an LLM directly
+- Policy gate (PASS/WARNING/BLOCK) is 100% deterministic
+- All AI output is clearly labelled; factual scan data is always visually separated from AI analysis
+- Suggested fixes are always validated before being trusted (apply → test → rescan)
 
 ---
 
-## 🏗️ System Architecture
+## Tech Stack
 
-```text
-                         ┌──────────────────────┐
-                         │      Developer       │
-                         │                      │
-                         │  GitHub OAuth Login  │
-                         │  Repository / PR     │
-                         └──────────┬───────────┘
-                                    │
-                                    ▼
-                         ┌──────────────────────┐
-                         │  GitHub Integration  │
-                         │                      │
-                         │ OAuth + Webhooks     │
-                         │ Repository / PR Data │
-                         └──────────┬───────────┘
-                                    │
-                                    ▼
-                         ┌──────────────────────┐
-                         │   CodeSentinel API   │
-                         │                      │
-                         │ Authentication       │
-                         │ Scan Management      │
-                         │ Repository Management│
-                         └──────────┬───────────┘
-                                    │
-                                    ▼
-                    ┌──────────────────────────────┐
-                    │       Scan Pipeline          │
-                    │                              │
-                    │  ┌────────┐  ┌───────────┐  │
-                    │  │Semgrep │  │ Gitleaks  │  │
-                    │  └────────┘  └───────────┘  │
-                    │                              │
-                    │       Dependency Scanner    │
-                    └──────────────┬───────────────┘
-                                   │
-                                   ▼
-                    ┌──────────────────────────────┐
-                    │        AI Analysis           │
-                    │                              │
-                    │ Context Analysis             │
-                    │ Vulnerability Classification │
-                    │ Risk Prioritization          │
-                    │ Fix Recommendation           │
-                    └──────────────┬───────────────┘
-                                   │
-                       ┌───────────┴───────────┐
-                       ▼                       ▼
-                ┌─────────────┐        ┌─────────────┐
-                │ RAG / Vector│        │ LLM / AI    │
-                │ Knowledge   │        │ Agent       │
-                └──────┬──────┘        └──────┬──────┘
-                       │                      │
-                       └──────────┬───────────┘
-                                  ▼
-                       ┌──────────────────────┐
-                       │ Security Intelligence│
-                       │                      │
-                       │ Risk Score           │
-                       │ Severity             │
-                       │ Confidence            │
-                       │ Explanation           │
-                       │ Remediation           │
-                       └──────────┬───────────┘
-                                  │
-                                  ▼
-                       ┌──────────────────────┐
-                       │     Dashboard        │
-                       │                      │
-                       │ Repository Security   │
-                       │ PR Security          │
-                       │ Vulnerabilities      │
-                       │ Scan History          │
-                       └──────────────────────┘
+| Layer | Technology |
+|---|---|
+| Backend API | FastAPI 0.115, Python 3.12 |
+| Agent Orchestration | LangGraph |
+| Task Queue | Celery 5 + Redis |
+| Database | PostgreSQL 16 + SQLAlchemy 2 |
+| Vector Database | Qdrant |
+| AI / LLM | OpenAI API (GPT-4o) |
+| Scanners | Semgrep, Gitleaks, Trivy |
+| Frontend | Next.js 15, TypeScript |
+| CI/CD | GitHub Actions |
+| Deployment | Docker + docker-compose |
+
+---
+
+## Prerequisites
+
+Before running locally, ensure you have:
+
+- **Docker Desktop** (v24+)
+- **Git**
+- A **GitHub OAuth App** with:
+  - Authorization callback URL: `http://localhost:8000/auth/github/callback`
+  - Scopes: `repo`, `read:user`
+- An **OpenAI API key** (GPT-4o or GPT-4o-mini)
+
+---
+
+## Local Development Setup
+
+### 1. Clone the repository
+
+```bash
+git clone https://github.com/your-org/CodeSentinel.git
+cd CodeSentinel
+```
+
+### 2. Configure environment variables
+
+```bash
+# Backend
+cp backend/.env.example backend/.env
+# Edit backend/.env and fill in required values
+
+# Frontend
+cp frontend/.env.example frontend/.env.local
+# Edit frontend/.env.local
+```
+
+**Required variables in `backend/.env`:**
+
+```dotenv
+# Database
+DATABASE_URL=postgresql+psycopg2://cs_user:cs_password@localhost:5432/codesentinel
+
+# Redis
+REDIS_URL=redis://localhost:6379/0
+
+# Qdrant
+QDRANT_URL=http://localhost:6333
+
+# Security
+SECRET_KEY=<generate with: python -c "import secrets; print(secrets.token_hex(32))">
+
+# GitHub OAuth
+GITHUB_CLIENT_ID=<your-github-oauth-app-client-id>
+GITHUB_CLIENT_SECRET=<your-github-oauth-app-client-secret>
+GITHUB_WEBHOOK_SECRET=<random-secret-for-webhook-verification>
+
+# AI
+OPENAI_API_KEY=<your-openai-api-key>
+LLM_MODEL=gpt-4o-mini
+
+# App
+FRONTEND_URL=http://localhost:3000
+ALLOWED_ORIGINS=http://localhost:3000
+APP_ENV=development
+```
+
+**Required variables in `frontend/.env.local`:**
+
+```dotenv
+NEXT_PUBLIC_API_URL=http://localhost:8000
+```
+
+### 3. Start all services
+
+```bash
+docker-compose up -d
+```
+
+This starts 5 services:
+- `postgres` — PostgreSQL 16 (port 5432)
+- `redis` — Redis 7 (port 6379)
+- `qdrant` — Qdrant vector DB (port 6333)
+- `backend` — FastAPI (port 8000)
+- `worker` — Celery worker
+
+### 4. Run database migrations
+
+```bash
+docker-compose exec backend alembic upgrade head
+```
+
+### 5. Index the security knowledge base
+
+```bash
+docker-compose exec backend python scripts/index_knowledge_base.py
+```
+
+### 6. Start the frontend
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Open [http://localhost:3000](http://localhost:3000)
+
+---
+
+## API Documentation
+
+Once the backend is running, interactive API docs are available at:
+- **Swagger UI**: http://localhost:8000/docs
+- **ReDoc**: http://localhost:8000/redoc
+- **OpenAPI JSON**: http://localhost:8000/openapi.json
+
+---
+
+## Running Tests
+
+```bash
+# Backend unit tests
+cd backend
+pytest tests/unit -v
+
+# All backend tests
+pytest tests/ -v
+
+# Frontend type check
+cd frontend
+npx tsc --noEmit
+
+# Frontend lint
+npm run lint
 ```
 
 ---
 
-## ✨ Key Features
+## Design & Specification Documents
 
-### 🔐 GitHub Integration
-
-* GitHub OAuth authentication
-* Repository selection
-* Repository information retrieval
-* Pull Request integration
-* Webhook-based scanning
-* Security results linked to PRs
-
-### 🔍 Security Scanning
-
-CodeSentinel integrates multiple security analysis tools:
-
-* **Semgrep** — Static Application Security Testing
-* **Gitleaks** — Secret and credential detection
-* **Dependency Scanner** — Vulnerable dependency detection
-
-The scanners generate raw security findings which are then processed by the CodeSentinel intelligence layer.
-
-### 🤖 AI Security Analysis
-
-The AI layer analyzes scanner findings using the surrounding code context.
-
-It can determine:
-
-* Is the finding actually exploitable?
-* How severe is the vulnerability?
-* Is the finding likely to be a false positive?
-* What is the potential impact?
-* What code should be changed?
-* How should the developer fix it?
-
-### 🧠 Context-Aware Analysis
-
-CodeSentinel goes beyond individual lines of code.
-
-The analysis can consider:
-
-```text
-Finding
-   │
-   ├── Source Code
-   ├── Surrounding Code
-   ├── File
-   ├── Repository
-   ├── Pull Request
-   ├── Previous Findings
-   └── Security Knowledge
-           │
-           ▼
-     Contextual Analysis
-           │
-           ▼
-       Final Risk
-```
-
-### 📚 RAG-Based Security Knowledge
-
-The RAG layer can retrieve relevant security information from sources such as:
-
-* OWASP
-* CWE
-* CVE information
-* Security guidelines
-* Vulnerability documentation
-
-This information is provided to the AI during analysis to improve the quality and reliability of security explanations.
-
-### 📊 Risk Prioritization
-
-Instead of treating every scanner finding equally, CodeSentinel categorizes issues according to their potential risk.
-
-Example:
-
-```text
-CRITICAL
-│
-├── Exploitable vulnerability
-├── Sensitive credential exposure
-└── High-impact security issue
-
-HIGH
-│
-├── Significant security weakness
-└── Potential exploitation
-
-MEDIUM
-│
-└── Security issue requiring attention
-
-LOW
-│
-└── Minor security concern
-```
+| Document | Description |
+|---|---|
+| [PRD.md](docs/PRD.md) | Product Requirements |
+| [Architecture.md](docs/Architecture.md) | System Architecture |
+| [AI-instructions.md](docs/AI-instructions.md) | AI Agent Behaviour Rules |
+| [DesignDoc.md](docs/DesignDoc.md) | UI/UX Design System |
+| [API.md](docs/API.md) | API Reference |
+| [Database.md](docs/Database.md) | Database Schema |
+| [Security.md](docs/Security.md) | Security Architecture |
+| [Deployment.md](docs/Deployment.md) | Deployment Guide |
 
 ---
 
-## 🔄 Pull Request Scanning Flow
+## Contributing
 
-```text
-Developer creates Pull Request
-             │
-             ▼
-       GitHub Webhook
-             │
-             ▼
-      CodeSentinel API
-             │
-             ▼
-       Fetch PR Changes
-             │
-             ▼
-       Security Scanners
-       ┌─────┼──────┐
-       ▼     ▼      ▼
-    Semgrep Gitleaks Dependency
-       │     │      │
-       └─────┼──────┘
-             ▼
-      Normalize Findings
-             │
-             ▼
-       AI Context Analysis
-             │
-             ▼
-       Risk Classification
-             │
-             ▼
-    Generate Explanation
-             │
-             ▼
-      Update PR / Dashboard
-```
+1. Fork and create a feature branch
+2. All CI checks must pass before merge (backend lint/test, frontend lint/typecheck, docker build)
+3. Follow the AI behaviour rules in `AI-instructions.md` — especially §7 (no LLM in gates) and §9 (PR framing)
 
 ---
 
-## 🛠️ Technology Stack
+## License
 
-### Frontend
-
-* React
-* JavaScript / TypeScript
-* Tailwind CSS
-
-### Backend
-
-* Node.js
-* Express.js
-
-### Database
-
-* PostgreSQL
-* Neon Database
-
-### Authentication
-
-* Better Auth
-* GitHub OAuth
-
-### Security Tools
-
-* Semgrep
-* Gitleaks
-* OWASP-based security knowledge
-* CVE / CWE information
-
-### AI Layer
-
-* Large Language Models
-* RAG
-* Embeddings
-* Vector Database
-* AI Agents
-
-### DevOps
-
-* Docker
-* GitHub Webhooks
-* CI/CD
-* Git
-
----
-
-## 📁 Project Structure
-
-```text
-codesentinel/
-│
-├── frontend/
-│   ├── src/
-│   ├── public/
-│   └── package.json
-│
-├── backend/
-│   ├── src/
-│   │   ├── api/
-│   │   ├── routes/
-│   │   ├── services/
-│   │   ├── models/
-│   │   └── utils/
-│   └── package.json
-│
-├── scanner/
-│   ├── semgrep/
-│   ├── gitleaks/
-│   └── dependency-scanner/
-│
-├── ai-engine/
-│   ├── rag/
-│   ├── agents/
-│   ├── embeddings/
-│   └── analysis/
-│
-├── database/
-│   ├── migrations/
-│   └── schema/
-│
-├── docs/
-│   ├── architecture/
-│   ├── api/
-│   └── diagrams/
-│
-├── .github/
-│   └── workflows/
-│
-├── .env.example
-├── docker-compose.yml
-├── .gitignore
-└── README.md
-```
-
----
-
-## 🔒 Security Intelligence Pipeline
-
-```text
-Source Code
-     │
-     ▼
-Security Scanners
-     │
-     ▼
-Raw Findings
-     │
-     ▼
-Finding Normalization
-     │
-     ▼
-Context Extraction
-     │
-     ▼
-RAG Knowledge Retrieval
-     │
-     ▼
-AI Analysis
-     │
-     ▼
-Risk Prioritization
-     │
-     ▼
-Developer Explanation
-     │
-     ▼
-Recommended Remediation
-```
-
----
-
-## 🎯 Goals
-
-The primary goals of CodeSentinel are to:
-
-* Reduce security alert fatigue
-* Prioritize genuinely dangerous vulnerabilities
-* Reduce false positives
-* Provide contextual security explanations
-* Help developers fix vulnerabilities faster
-* Integrate security directly into the development workflow
-* Provide a unified security intelligence dashboard
-
----
-
-## 🔮 Future Scope
-
-Possible future improvements include:
-
-* Automated secure-code fixes
-* Multi-repository security intelligence
-* Developer security profiles
-* Organization-wide security analytics
-* Security trend analysis
-* Advanced vulnerability correlation
-* AI-powered threat modeling
-* Automated security policy generation
-* Continuous repository monitoring
-* Integration with additional security scanners
-
----
-
-## 👨‍💻 Project
-
-**CodeSentinel: A Context-Aware Security Intelligence Platform for Modern DevSecOps**
-
-Built to bridge the gap between automated security scanning and intelligent, developer-friendly security analysis.
+MIT License — see [LICENSE](LICENSE)

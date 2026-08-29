@@ -1,0 +1,111 @@
+name: Backend CI
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - "backend/**"
+      - "workers/**"
+      - "docker-compose.test.yml"
+      - ".github/workflows/backend-ci.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "backend/**"
+      - "workers/**"
+
+jobs:
+  lint-and-typecheck:
+    name: Lint & Type Check
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Ruff lint
+        run: ruff check . --output-format=github
+
+      - name: Mypy type check
+        run: mypy app workers --ignore-missing-imports --no-error-summary
+
+  test:
+    name: Unit & Integration Tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: codesentinel_test
+          POSTGRES_USER: cs_user
+          POSTGRES_PASSWORD: cs_password
+        options: >-
+          --health-cmd "pg_isready -U cs_user -d codesentinel_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+        ports:
+          - 5432:5432
+
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+        ports:
+          - 6379:6379
+
+      qdrant:
+        image: qdrant/qdrant:latest
+        ports:
+          - 6333:6333
+
+    env:
+      DATABASE_URL: postgresql+psycopg2://cs_user:cs_password@localhost:5432/codesentinel_test
+      REDIS_URL: redis://localhost:6379/0
+      QDRANT_URL: http://localhost:6333
+      OPENAI_API_KEY: sk-test-placeholder
+      GITHUB_CLIENT_ID: test-client-id
+      GITHUB_CLIENT_SECRET: test-client-secret
+      GITHUB_WEBHOOK_SECRET: test-webhook-secret
+      APP_ENV: testing
+      SECRET_KEY: test-secret-key-minimum-32-chars-long
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run Alembic migrations
+        run: alembic upgrade head
+
+      - name: Run pytest (unit tests)
+        run: pytest tests/unit -v --tb=short --no-header
+
+      - name: Run pytest (integration tests, if any)
+        run: pytest tests/integration -v --tb=short --no-header -x
+        continue-on-error: true
