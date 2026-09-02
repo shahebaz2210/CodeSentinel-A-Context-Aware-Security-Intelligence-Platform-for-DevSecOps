@@ -70,4 +70,13 @@ This is a cross-cutting UX requirement stated repeatedly and explicitly in the s
 - The UI must clearly separate **"security check result"** (PASS/WARNING/BLOCK, produced by the deterministic policy engine) from **"PR approval decision"** (always a human action).
 - AI-suggested fixes are **suggestions** — even after passing patch validation, the UI should not present them as automatically applied or as guaranteed-safe, only as "validated" (tests + re-scan passed).
 
-
+## 7. Explicitly Unspecified Areas (do not assume)
+The following are **not addressed anywhere in the source document** and must be defined by a designer/PM before implementation — this doc intentionally does not invent them:
+- Visual design system (colors, typography, branding)
+- Navigation structure / IA beyond the two named views
+- Responsive/mobile behavior
+- Accessibility requirements
+- Onboarding / empty-state flows (e.g., first-time repo connection)
+- Notification or alerting UX (email, Slack, etc.)
+- Multi-repository / organization-level views
+- User account, team, or permissions management UI
