@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { Suspense, useEffect, useState, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 
-export default function AuthCallback() {
+function AuthCallbackContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -203,5 +203,64 @@ export default function AuthCallback() {
         )}
       </div>
     </main>
+  );
+}
+
+export default function AuthCallback() {
+  return (
+    <Suspense
+      fallback={
+        <main
+          style={{
+            minHeight: "100vh",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            background: "var(--cs-bg)",
+          }}
+        >
+          <div
+            className="glass-card"
+            style={{
+              padding: 48,
+              textAlign: "center",
+              maxWidth: 400,
+            }}
+          >
+            <div
+              style={{
+                width: 40,
+                height: 40,
+                border: "3px solid var(--cs-border)",
+                borderTopColor: "var(--cs-accent)",
+                borderRadius: "50%",
+                margin: "0 auto 20px",
+              }}
+              className="animate-spin"
+            />
+
+            <h2
+              style={{
+                color: "var(--cs-text)",
+                marginBottom: 8,
+              }}
+            >
+              Connecting to GitHub...
+            </h2>
+
+            <p
+              style={{
+                color: "var(--cs-text-muted)",
+                fontSize: 13,
+              }}
+            >
+              Loading authentication...
+            </p>
+          </div>
+        </main>
+      }
+    >
+      <AuthCallbackContent />
+    </Suspense>
   );
 }
