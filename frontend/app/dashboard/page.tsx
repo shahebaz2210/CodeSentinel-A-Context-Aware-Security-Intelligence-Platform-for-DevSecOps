@@ -1,23 +1,58 @@
 "use client";
+
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { fetchGitHubRepos, connectRepo, fetchLatestScan, GitHubRepo } from "../lib/api";
+import {
+  fetchGitHubRepos,
+  connectRepo,
+  GitHubRepo,
+} from "../lib/api";
 
 export default function DashboardPage() {
   const router = useRouter();
+
   const [repos, setRepos] = useState<GitHubRepo[]>([]);
   const [loading, setLoading] = useState(true);
-  const [user, setUser] = useState<{ login: string; avatar_url?: string } | null>(null);
+  const [user, setUser] = useState<{
+    login: string;
+    avatar_url?: string;
+  } | null>(null);
   const [connecting, setConnecting] = useState<number | null>(null);
-  const [connectedRepos, setConnectedRepos] = useState<Set<number>>(new Set());
+  const [connectedRepos, setConnectedRepos] = useState<Set<number>>(
+    new Set()
+  );
   const [search, setSearch] = useState("");
 
   useEffect(() => {
     const token = localStorage.getItem("github_token");
-    if (!token) { router.push("/"); return; }
+
+    if (!token) {
+      router.push("/");
+      return;
+    }
+
     const userStr = localStorage.getItem("github_user");
-    if (userStr) setUser(JSON.parse(userStr));
+
+    if (userStr) {
+      try {
+        const parsedUser = JSON.parse(userStr);
+
+        const timer = setTimeout(() => {
+          setUser(parsedUser);
+        }, 0);
+
+        fetchGitHubRepos()
+          .then(setRepos)
+          .catch(() => router.push("/"))
+          .finally(() => setLoading(false));
+
+        return () => clearTimeout(timer);
+      } catch {
+        router.push("/");
+        return;
+      }
+    }
 
     fetchGitHubRepos()
       .then(setRepos)
@@ -27,6 +62,7 @@ export default function DashboardPage() {
 
   async function handleConnect(repo: GitHubRepo) {
     setConnecting(repo.github_id);
+
     try {
       const result = await connectRepo({
         github_id: repo.github_id,
@@ -37,9 +73,13 @@ export default function DashboardPage() {
         owner_login: repo.owner,
         is_private: repo.private,
       });
-      setConnectedRepos((prev) => new Set([...prev, repo.github_id]));
+
+      setConnectedRepos(
+        (prev) => new Set([...prev, repo.github_id])
+      );
+
       router.push(`/dashboard/repos/${result.id}`);
-    } catch (e) {
+    } catch {
       alert("Failed to connect repository");
     } finally {
       setConnecting(null);
@@ -54,7 +94,14 @@ export default function DashboardPage() {
   );
 
   return (
-    <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", background: "var(--cs-bg)" }}>
+    <div
+      style={{
+        minHeight: "100vh",
+        display: "flex",
+        flexDirection: "column",
+        background: "var(--cs-bg)",
+      }}
+    >
       {/* Header */}
       <header
         style={{
@@ -69,24 +116,87 @@ export default function DashboardPage() {
           zIndex: 50,
         }}
       >
-        <Link href="/dashboard" style={{ display: "flex", alignItems: "center", gap: 10, textDecoration: "none" }}>
+        <Link
+          href="/dashboard"
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+            textDecoration: "none",
+          }}
+        >
           <span style={{ fontSize: 22 }}>🛡️</span>
-          <span style={{ fontWeight: 700, fontSize: 15, color: "var(--cs-text)" }}>CodeSentinel</span>
+
+          <span
+            style={{
+              fontWeight: 700,
+              fontSize: 15,
+              color: "var(--cs-text)",
+            }}
+          >
+            CodeSentinel
+          </span>
         </Link>
+
         {user && (
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 10,
+            }}
+          >
             {user.avatar_url && (
-              <img src={user.avatar_url} alt={user.login} style={{ width: 28, height: 28, borderRadius: "50%", border: "1px solid var(--cs-border)" }} />
+              <img
+                src={user.avatar_url}
+                alt={user.login}
+                style={{
+                  width: 28,
+                  height: 28,
+                  borderRadius: "50%",
+                  border: "1px solid var(--cs-border)",
+                }}
+              />
             )}
-            <span style={{ fontSize: 13, color: "var(--cs-text-muted)" }}>{user.login}</span>
+
+            <span
+              style={{
+                fontSize: 13,
+                color: "var(--cs-text-muted)",
+              }}
+            >
+              {user.login}
+            </span>
           </div>
         )}
       </header>
 
-      <main style={{ flex: 1, padding: "32px 24px", maxWidth: 900, margin: "0 auto", width: "100%" }}>
+      <main
+        style={{
+          flex: 1,
+          padding: "32px 24px",
+          maxWidth: 900,
+          margin: "0 auto",
+          width: "100%",
+        }}
+      >
         <div style={{ marginBottom: 28 }}>
-          <h1 style={{ fontSize: 22, fontWeight: 700, marginBottom: 6 }}>Your Repositories</h1>
-          <p style={{ color: "var(--cs-text-muted)", fontSize: 13 }}>
+          <h1
+            style={{
+              fontSize: 22,
+              fontWeight: 700,
+              marginBottom: 6,
+            }}
+          >
+            Your Repositories
+          </h1>
+
+          <p
+            style={{
+              color: "var(--cs-text-muted)",
+              fontSize: 13,
+            }}
+          >
             Select a repository to connect and run a security scan.
           </p>
         </div>
@@ -99,17 +209,37 @@ export default function DashboardPage() {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="cs-input"
-          style={{ marginBottom: 20, maxWidth: 400 }}
+          style={{
+            marginBottom: 20,
+            maxWidth: 400,
+          }}
         />
 
         {loading ? (
-          <div style={{ display: "grid", gap: 12 }}>
+          <div
+            style={{
+              display: "grid",
+              gap: 12,
+            }}
+          >
             {[...Array(5)].map((_, i) => (
-              <div key={i} className="glass-card" style={{ height: 70, opacity: 0.4 + i * 0.1 }} />
+              <div
+                key={i}
+                className="glass-card"
+                style={{
+                  height: 70,
+                  opacity: 0.4 + i * 0.1,
+                }}
+              />
             ))}
           </div>
         ) : (
-          <div style={{ display: "grid", gap: 10 }}>
+          <div
+            style={{
+              display: "grid",
+              gap: 10,
+            }}
+          >
             {filtered.map((repo) => (
               <div
                 key={repo.github_id}
@@ -122,44 +252,121 @@ export default function DashboardPage() {
                   gap: 16,
                 }}
               >
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
-                    <span style={{ fontWeight: 600, fontSize: 14, color: "var(--cs-text)" }}>
+                <div
+                  style={{
+                    flex: 1,
+                    minWidth: 0,
+                  }}
+                >
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 10,
+                      marginBottom: 4,
+                    }}
+                  >
+                    <span
+                      style={{
+                        fontWeight: 600,
+                        fontSize: 14,
+                        color: "var(--cs-text)",
+                      }}
+                    >
                       {repo.full_name}
                     </span>
+
                     {repo.private && (
-                      <span className="badge badge-info" style={{ fontSize: 10, padding: "1px 6px" }}>Private</span>
+                      <span
+                        className="badge badge-info"
+                        style={{
+                          fontSize: 10,
+                          padding: "1px 6px",
+                        }}
+                      >
+                        Private
+                      </span>
                     )}
+
                     {repo.language && (
-                      <span style={{ fontSize: 11, color: "var(--cs-text-muted)", background: "var(--cs-bg)", padding: "2px 8px", borderRadius: 4, border: "1px solid var(--cs-border)" }}>
+                      <span
+                        style={{
+                          fontSize: 11,
+                          color: "var(--cs-text-muted)",
+                          background: "var(--cs-bg)",
+                          padding: "2px 8px",
+                          borderRadius: 4,
+                          border: "1px solid var(--cs-border)",
+                        }}
+                      >
                         {repo.language}
                       </span>
                     )}
                   </div>
-                  <div style={{ fontSize: 11, color: "var(--cs-text-dim)" }}>
-                    {repo.default_branch} · Updated {repo.updated_at ? new Date(repo.updated_at).toLocaleDateString() : "recently"}
+
+                  <div
+                    style={{
+                      fontSize: 11,
+                      color: "var(--cs-text-dim)",
+                    }}
+                  >
+                    {repo.default_branch} · Updated{" "}
+                    {repo.updated_at
+                      ? new Date(repo.updated_at).toLocaleDateString()
+                      : "recently"}
                   </div>
                 </div>
+
                 <button
                   id={`connect-repo-${repo.github_id}`}
                   onClick={() => handleConnect(repo)}
-                  disabled={connecting === repo.github_id || connectedRepos.has(repo.github_id)}
+                  disabled={
+                    connecting === repo.github_id ||
+                    connectedRepos.has(repo.github_id)
+                  }
                   className="btn-primary"
                   style={{
                     fontSize: 13,
                     padding: "8px 16px",
-                    opacity: connecting !== null && connecting !== repo.github_id ? 0.5 : 1,
-                    pointerEvents: connecting !== null ? "none" : "auto",
+                    opacity:
+                      connecting !== null &&
+                      connecting !== repo.github_id
+                        ? 0.5
+                        : 1,
+                    pointerEvents:
+                      connecting !== null ? "none" : "auto",
                   }}
                 >
                   {connecting === repo.github_id ? (
-                    <span className="animate-spin" style={{ display: "inline-block", width: 14, height: 14, border: "2px solid rgba(0,0,0,0.3)", borderTopColor: "#000", borderRadius: "50%" }} />
-                  ) : connectedRepos.has(repo.github_id) ? "✓ Connected" : "Connect"}
+                    <span
+                      className="animate-spin"
+                      style={{
+                        display: "inline-block",
+                        width: 14,
+                        height: 14,
+                        border:
+                          "2px solid rgba(0,0,0,0.3)",
+                        borderTopColor: "#000",
+                        borderRadius: "50%",
+                      }}
+                    />
+                  ) : connectedRepos.has(repo.github_id) ? (
+                    "✓ Connected"
+                  ) : (
+                    "Connect"
+                  )}
                 </button>
               </div>
             ))}
+
             {filtered.length === 0 && (
-              <div style={{ textAlign: "center", padding: 60, color: "var(--cs-text-muted)" }}>
+              <div
+                style={{
+                  textAlign: "center",
+                  padding: 60,
+                  color: "var(--cs-text-muted)",
+                }}
+              >
                 No repositories match your search.
               </div>
             )}
