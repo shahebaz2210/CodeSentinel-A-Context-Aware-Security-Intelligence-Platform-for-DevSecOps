@@ -31,11 +31,4 @@ The source document does **not** define:
 - Disaster recovery / backup strategy for PostgreSQL or Qdrant.
 - Monitoring, logging, or alerting stack.
 
-## 4. Recommendation
-Before infrastructure work begins, the following should be defined with engineering/DevOps stakeholders — none of it is present in the source and should not be assumed:
-1. Target cloud provider and managed Kubernetes service (e.g., EKS, GKE, AKS) or self-managed cluster.
-2. Namespace/environment separation strategy.
-3. Secrets management (e.g., a secrets manager or Kubernetes Secrets + external vault).
-4. Sizing and autoscaling policy for the Scan Worker pool, given scan execution is both long-running and needs isolated sandboxing for Patch Validation.
-5. CI/CD pipeline definition in GitHub Actions: build → test → (security scan of CodeSentinel itself, if desired) → deploy stages, and what environment each pipeline stage targets.
-6. Backup/retention policy for PostgreSQL (security memory is historical and cumulative, so data loss has product-level consequences) and Qdrant (knowledge base re-indexing cost if lost).
+
