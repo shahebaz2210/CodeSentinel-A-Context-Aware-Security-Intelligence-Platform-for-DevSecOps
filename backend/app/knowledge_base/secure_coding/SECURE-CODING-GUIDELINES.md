@@ -58,7 +58,7 @@ class ScanRequest(BaseModel):
 
 ## Secrets Management
 
-### Never in Code
+
 ```python
 # BAD — never do this
 OPENAI_API_KEY = "sk-proj-abc123..."
