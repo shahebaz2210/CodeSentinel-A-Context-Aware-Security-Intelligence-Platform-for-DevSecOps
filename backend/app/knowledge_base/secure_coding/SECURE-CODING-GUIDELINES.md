@@ -61,7 +61,7 @@ class ScanRequest(BaseModel):
 ### Never in Code
 ```python
 # BAD — never do this
-OPENAI_API_KEY = "sk-proj-abc123..."
+# OPENAI_API_KEY = "sk-proj-abc123..."
 DATABASE_URL = "postgresql://user:password@host/db"
 
 # GOOD — always from environment
